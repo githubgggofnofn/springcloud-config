@@ -1,0 +1,118 @@
+server:
+  port: 8105
+
+spring:
+  application:
+    name: provider-payment # 为了构成服务集群，把服务同名处理（原provider-payment8105）
+  properties:
+    active: dev  #环境设置：dev、test、prod
+  cloud:
+    consul:
+      host: 10.40.10.246  # windows本机localhost
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+        heartbeat:
+          enabled: true # 默认是false | true 打开心跳协议
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true # 开启页面表单的REST功能风格（客户端无需进过Filter转换）
+  jdbc:
+      template:
+        query-timeout: 10
+  datasource:
+    #url: jdbc:mysql://192.168.1.1:3306/demo?useUnicode=true&characterEncoding=utf8&useSSL=false
+    # JDBC连接Mysql6 com.mysql.jdbc.Driver，需要指定时区serverTimezone:
+    # 在设定时区的时候，如果设定serverTimezone=UTC，会比中国时间早8个小时，
+    # 如果在中国，可以选择Asia/Shanghai或者Asia/Hongkong
+    # 例如：?serverTimezone=Shanghai&useUnicode=true&characterEncoding=utf8&useSSL=false
+    #url: jdbc:mysql://192.168.1.1:3306/demo?serverTimezone=UTC&useUnicode=true&characterEncoding=utf8&useSSL=false
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://localhost:3306/zjhzsh?useUnicode=true&characterEncoding=utf8&useSSL=false
+    username: root
+    password: root
+    #com.mysql.jdbc.Driver的前身是org.gjt.mm.mysql.Driver。现在主要用com.mysql.jdbc.Drive
+    #但为了保持兼容性保留了org.gjt.mm.mysql.Driver这个路径的引用。
+    driver-class-name: com.mysql.jdbc.Driver # JDBC连接 mysql-connector-java 5的。
+      #driver-class-name: com.mysql.cj.jdbc.Driver # JDBC连接 mysql-connector-java 6的。
+    # Druid相关配置
+    druid:
+      initialSize: 5 # 初始连接数
+      minIdle: 10 # 最小连接池数量
+      maxActive: 20 # 最大连接池数量
+      maxWait: 60000 # 配置获取连接等待超时的时间
+      timeBetweenEvictionRunsMillis: 60000 # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+      minEvictableIdleTimeMillis: 300000 # 配置一个连接在池中最小生存的时间，单位是毫秒
+      maxEvictableIdleTimeMillis: 900000 # 配置一个连接在池中最大生存的时间，单位是毫秒
+      validationQuery: SELECT 1 # 配置检测连接是否有效
+      #申请连接的时候检测，如果空闲时间大于timeBetweenEvictionRunsMillis，执行validationQuery检测连接是否有效。
+      testWhileIdle: true
+      #配置向连接池归还连接时，是否检查连接有效性，true每次都检查；false不检查。做了这个配置会降低性能。
+      #testOnReturn: false
+      #打开PsCache，并且指定每个连接上PSCache的大小
+      poolPreparedStatements: true
+      maxPoolPreparedStatementPerConnectionSize: 20
+
+      aop-patterns: com.hzwei.*  # 配置要扫描的包
+      # 配置监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+      filters: stat,wall # 配置监控防火墙stat(sql监控)wall(防火墙)
+      #useGlobalDataSourceStat: true #合并多个DruidDatasource的监控数据
+      # 监控页的配置
+      stat-view-servlet: # 开启了statViewServlet功能,也就是监控页的配置
+        enabled: true
+        login-username: admin
+        login-password: 13777875174
+        reset-enable: false
+      # web应用监控配置
+      web-stat-filter: # 监控web应用，开启web监控功能
+        enabled: true
+        url-pattern: /*
+        exclusions: '*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*'
+      # 配置Filter(对上面filters里面的配置项进行详细配置)
+      filter:
+        # 配置StatFilter
+        stat:
+          enabled: true
+          #db-type: h2
+          log-slow-sql: true
+          slow-sql-millis: 1000  # 设置所有超过1000行的查询都是慢查询
+        # 配置WallFilter
+        wall: #开启防火墙的功能
+          enabled: true
+            #db-type: h2
+          #config:
+          #delete-allow: false # 默认为true(允许删除记录)
+          #drop-table-allow: false # 默认为true(允许删除表)
+  servlet:
+    # 配置上传文件大小限制，默认是单个文件最大1M 总文件最大10M(修改后单最大50MB，总文件最大100MB)
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  devtools:
+    restart:
+      enabled: true  # 热部署生效
+      #exclude: static/**,public/**  #设置不重启的目录
+      poll-interval: 2s   # 确定轮训class文件更改的时间
+      quiet-period: 1s    # 确定轮训到class文件更改后的观察时间
+      #additional-paths: src/main/java/**  #设置重启的目录
+    #add-properties: false  # 默认:true,如果不希望应用属性默认值设置为false
+
+# mybatis 配置信息
+mybatis:
+  #config-localhost: classpath:mybatis/mybatis-config.xml
+  mapper-locations: classpath:mybatis/mapper/*xml
+  type-aliases-package: com.hzwei.commonsapi.entity
+  # mybatis-Plus默认配好，任意包的类路径下面的所有mapper文件夹下任意路径下的所有xml都是SQL映射文件
+  #mapper-locations: classpath:com/hzwei/dao/*xml
+  configuration: # mybatis全局配置文件中的相关配置都在此配置即可
+    #是否开启自动驼峰命名规则（camel case）映射，
+    #即从经典数据库列名 A_COLUMN（下划线命名） 到经典 Java 属性名 aColumn（驼峰命名） 的类似映射。
+    #1.此属性在 MyBatis 中原默认值为 false，在 MyBatis-Plus 中，此属性也将用于生成最终的 SQL 的 select body
+    #2.如果数据库命名符合规则无需使用 @TableField 注解指定数据库字段名
+    map-underscore-to-camel-case: true # 开启
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl #Mybatis开启控制台打印sql语句
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  #Mybatis-pius开启控制台打印sql语句
